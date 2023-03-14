@@ -1,5 +1,9 @@
 package com.aeyrium.sensor;
 
+import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.embedding.engine.plugins.activity.ActivityAware;
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
+import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
@@ -12,8 +16,10 @@ import android.view.WindowManager;
 import android.app.Activity;
 import android.content.Context;
 
+import androidx.annotation.NonNull;
+
 /** AeyriumSensorPlugin */
-public class AeyriumSensorPlugin implements EventChannel.StreamHandler {
+public class AeyriumSensorPlugin implements FlutterPlugin, EventChannel.StreamHandler, ActivityAware {
 
   private static final String SENSOR_CHANNEL_NAME =
           "plugins.aeyrium.com/sensor";
@@ -23,18 +29,21 @@ public class AeyriumSensorPlugin implements EventChannel.StreamHandler {
   private SensorManager sensorManager;
   private Sensor sensor;
   private int mLastAccuracy;
+  BinaryMessenger binaryMessenger;
 
   /** Plugin registration. */
   public static void registerWith(Registrar registrar) {
     final EventChannel sensorChannel =
             new EventChannel(registrar.messenger(), SENSOR_CHANNEL_NAME);
     sensorChannel.setStreamHandler(
-            new AeyriumSensorPlugin(registrar.context(), Sensor.TYPE_ROTATION_VECTOR, registrar));
+            new AeyriumSensorPlugin(registrar.context(), Sensor.TYPE_ROTATION_VECTOR, registrar.activity()));
 
   }
 
-  private AeyriumSensorPlugin(Context context, int sensorType, Registrar registrar) {
-    mWindowManager = registrar.activity().getWindow().getWindowManager();
+  public AeyriumSensorPlugin(){}
+
+  private AeyriumSensorPlugin(Context context, int sensorType, Activity activity) {
+    mWindowManager = activity.getWindow().getWindowManager();
     sensorManager = (SensorManager) context.getSystemService(context.SENSOR_SERVICE);
     sensor = sensorManager.getDefaultSensor(sensorType);
   }
@@ -116,5 +125,38 @@ public class AeyriumSensorPlugin implements EventChannel.StreamHandler {
     sensorValues[0] = pitch;
     sensorValues[1] = roll;
     events.success(sensorValues);
+  }
+
+  @Override
+  public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
+    binaryMessenger = binding.getBinaryMessenger();
+  }
+
+  @Override
+  public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
+
+  }
+
+  @Override
+  public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
+    final EventChannel sensorChannel =
+            new EventChannel(binaryMessenger, SENSOR_CHANNEL_NAME);
+    sensorChannel.setStreamHandler(
+            new AeyriumSensorPlugin(binding.getActivity().getApplicationContext(), Sensor.TYPE_ROTATION_VECTOR, binding.getActivity()));
+  }
+
+  @Override
+  public void onDetachedFromActivityForConfigChanges() {
+
+  }
+
+  @Override
+  public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding binding) {
+
+  }
+
+  @Override
+  public void onDetachedFromActivity() {
+
   }
 }
