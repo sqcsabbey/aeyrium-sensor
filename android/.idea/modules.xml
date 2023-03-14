@@ -2,7 +2,10 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/aeyrium_sensor.iml" filepath="$PROJECT_DIR$/aeyrium_sensor.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/aeyrium_sensor.iml" filepath="$PROJECT_DIR$/.idea/modules/aeyrium_sensor.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/aeyrium_sensor.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/aeyrium_sensor.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/aeyrium_sensor.main.iml" filepath="$PROJECT_DIR$/.idea/modules/aeyrium_sensor.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/aeyrium_sensor.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/aeyrium_sensor.unitTest.iml" />
     </modules>
   </component>
 </project>
