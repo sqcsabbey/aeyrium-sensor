@@ -23,10 +23,11 @@ void _initMotionManager() {
   }
 }
 
-static void sendData(Float64 pitch, Float64 roll, FlutterEventSink sink) {
+static void sendData(Float64 pitch, Float64 roll,Float64 yaw, FlutterEventSink sink) {
   NSMutableData* event = [NSMutableData dataWithCapacity:2 * sizeof(Float64)];
   [event appendBytes:&pitch length:sizeof(Float64)];
   [event appendBytes:&roll length:sizeof(Float64)];
+  [event appendBytes:&yaw length:sizeof(Float64)];
   sink([FlutterStandardTypedData typedDataWithFloat64:event]);
 }
 
@@ -74,7 +75,8 @@ double degrees(double radians) {
      double roll = -(atan2(2*(quat.y*quat.w - quat.x*quat.z), 1 - 2*quat.y*quat.y - 2*quat.z*quat.z)) ;
      double roll2 = -(atan2(-a.m13, a.m33)); //roll based on android code from matrix
      double rollGravity =  atan2(data.gravity.x, data.gravity.y) - M_PI; //roll based on just gravity
-     sendData(pitch, rollGravity , eventSink);
+     double myYaw = asin(2*quat.x*quat.y + 2*quat.w*quat.z);
+     sendData(pitch, rollGravity , myYaw, eventSink);
    }];
   return nil;
 }

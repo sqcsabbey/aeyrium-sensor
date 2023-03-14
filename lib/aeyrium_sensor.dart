@@ -14,7 +14,13 @@ class SensorEvent {
   ///A roll is a rotation around a longitudinal (Y) axis that passes through the device from its top to bottom
   final double roll;
 
-  SensorEvent(this.pitch, this.roll);
+  final double yaw;
+
+  SensorEvent(
+    this.pitch,
+    this.roll,
+    this.yaw,
+  );
 
   @override
   String toString() => '[Event: (pitch: $pitch, roll: $roll)]';
@@ -36,6 +42,6 @@ class AeyriumSensor {
   }
 
   static SensorEvent _listToSensorEvent(List<double> list) {
-    return SensorEvent(list[0], list[1]);
+    return SensorEvent(list[0], list[1], list[2]);
   }
 }
