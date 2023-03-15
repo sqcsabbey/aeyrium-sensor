@@ -51,15 +51,15 @@ double degrees(double radians) {
      // Correct for the rotation matrix not including the screen orientation:
      UIDeviceOrientation orientation = [[UIDevice currentDevice] orientation];
      float deviceOrientationRadians = 0.0f;
-     if (orientation == UIDeviceOrientationLandscapeLeft) {
-       deviceOrientationRadians = M_PI_2;
-     }
-     if (orientation == UIDeviceOrientationLandscapeRight) {
-       deviceOrientationRadians = -M_PI_2;
-     }
-     if (orientation == UIDeviceOrientationPortraitUpsideDown) {
-       deviceOrientationRadians = M_PI;
-     }
+//     if (orientation == UIDeviceOrientationLandscapeLeft) {
+//       deviceOrientationRadians = M_PI_2;
+//     }
+//     if (orientation == UIDeviceOrientationLandscapeRight) {
+//       deviceOrientationRadians = -M_PI_2;
+//     }
+//     if (orientation == UIDeviceOrientationPortraitUpsideDown) {
+//       deviceOrientationRadians = M_PI;
+//     }
      GLKMatrix4 baseRotation = GLKMatrix4MakeRotation(deviceOrientationRadians, 0.0f, 1.0f, 1.0f);
      
      GLKMatrix4 deviceMotionAttitudeMatrix;
