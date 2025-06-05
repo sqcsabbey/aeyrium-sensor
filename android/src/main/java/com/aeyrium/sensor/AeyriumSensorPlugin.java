@@ -6,13 +6,13 @@ import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.MethodChannel.Result;
-import io.flutter.plugin.common.PluginRegistry.Registrar;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.view.Surface;
 import android.view.WindowManager;
+import android.view.Display;
 import android.app.Activity;
 import android.content.Context;
 
@@ -31,14 +31,6 @@ public class AeyriumSensorPlugin implements FlutterPlugin, EventChannel.StreamHa
   private int mLastAccuracy;
   BinaryMessenger binaryMessenger;
 
-  /** Plugin registration. */
-  public static void registerWith(Registrar registrar) {
-    final EventChannel sensorChannel =
-            new EventChannel(registrar.messenger(), SENSOR_CHANNEL_NAME);
-    sensorChannel.setStreamHandler(
-            new AeyriumSensorPlugin(registrar.context(), Sensor.TYPE_ROTATION_VECTOR, registrar.activity()));
-
-  }
 
   public AeyriumSensorPlugin(){}
 
@@ -90,7 +82,8 @@ public class AeyriumSensorPlugin implements FlutterPlugin, EventChannel.StreamHa
 
     // Remap the axes as if the device screen was the instrument panel,
     // and adjust the rotation matrix for the device orientation.
-    switch (mWindowManager.getDefaultDisplay().getRotation()) {
+    Display display = mWindowManager.getDefaultDisplay();
+    switch (display.getRotation()) {
       case Surface.ROTATION_0:
       default:
         worldAxisForDeviceAxisX = SensorManager.AXIS_X;
