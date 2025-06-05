@@ -26,17 +26,10 @@ class SensorEvent {
   String toString() => '[Event: (pitch: $pitch, roll: $roll)]';
 }
 
-class AeyriumSensor {
-  static final Stream<sensorevent> _sensorEvents = _sensorEventChannel
-      .receiveBroadcastStream()
-      .map((dynamic event) => _listToSensorEvent(event.cast<double>()));</double></sensorevent>
+class AeyriumSensor { static final Stream _sensorEvents = _sensorEventChannel .receiveBroadcastStream() .map((dynamic event) => _listToSensorEvent(event.cast()));
 
-  AeyriumSensor._();
+AeyriumSensor._();
 
-  /// A broadcast stream of events from the device rotation sensor.
-  static Stream<sensorevent> get sensorEvents => _sensorEvents;</sensorevent>
+/// A broadcast stream of events from the device rotation sensor. static Stream get sensorEvents => _sensorEvents;
 
-  static SensorEvent _listToSensorEvent(List<double> list) {
-    return SensorEvent(list[0], list[1], list[2]);
-  }
-}
+static SensorEvent _listToSensorEvent(List list) { return SensorEvent(list[0], list[1], list[2]); } }
