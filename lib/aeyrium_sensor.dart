@@ -33,12 +33,13 @@ class AeyriumSensor {
 
   /// A broadcast stream of events from the device rotation sensor.
   static Stream<SensorEvent> get sensorEvents {
-    if (_sensorEvents == null) {
-      _sensorEvents = _sensorEventChannel
+    var e = _sensorEvents;
+    if (e == null) {
+      e = _sensorEvents = _sensorEventChannel
           .receiveBroadcastStream()
           .map((dynamic event) => _listToSensorEvent(event.cast<double>()));
     }
-    return _sensorEvents;
+    return e;
   }
 
   static SensorEvent _listToSensorEvent(List<double> list) {
