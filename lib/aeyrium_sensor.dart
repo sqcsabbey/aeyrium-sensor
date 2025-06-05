@@ -27,7 +27,7 @@ class SensorEvent {
 }
 
 class AeyriumSensor {
-  static Stream<SensorEvent>? _sensorEvents;
+  static late Stream<SensorEvent> _sensorEvents;
 
   AeyriumSensor._();
 
