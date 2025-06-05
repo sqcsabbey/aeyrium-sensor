@@ -27,14 +27,21 @@ class SensorEvent {
 }
 
 class AeyriumSensor {
-  static final Stream sensorEvents = _sensorEventChannel
-      .receiveBroadcastStream()
-      .map((dynamic event) => _listToSensorEvent(event.cast()));
+  static Stream<SensorEvent>? _sensorEvents;
 
   AeyriumSensor._();
 
-  /// A broadcast stream of events from the device rotation sensor. static Stream get sensorEvents => sensorEvents;
-  static SensorEvent _listToSensorEvent(List list) {
+  /// A broadcast stream of events from the device rotation sensor.
+  static Stream<SensorEvent> get sensorEvents {
+    if (_sensorEvents == null) {
+      _sensorEvents = _sensorEventChannel
+          .receiveBroadcastStream()
+          .map((dynamic event) => _listToSensorEvent(event.cast<double>()));
+    }
+    return _sensorEvents;
+  }
+
+  static SensorEvent _listToSensorEvent(List<double> list) {
     return SensorEvent(list[0], list[1], list[2]);
   }
 }
