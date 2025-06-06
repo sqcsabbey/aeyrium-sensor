@@ -4,4 +4,7 @@
 @end
 
 @interface FLTSensorStreamHandler : NSObject<FlutterStreamHandler>
+@property (nonatomic, assign) BOOL isStarted;
+- (void)startSensors;
+- (void)stopSensors;
 @end

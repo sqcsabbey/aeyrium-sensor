@@ -411,7 +411,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/Flutter",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.neon.sensor.example;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aeyrium.sensor.example;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VERSIONING_SYSTEM = "apple-generic";
 			};

@@ -10,6 +10,21 @@
       [FlutterEventChannel eventChannelWithName:@"plugins.aeyrium.com/sensor"
                                 binaryMessenger:[registrar messenger]];
   [sensorChannel setStreamHandler:sensorStreamHandler];
+  
+  FlutterMethodChannel* methodChannel =
+      [FlutterMethodChannel methodChannelWithName:@"plugins.aeyrium.com/sensor_method"
+                                   binaryMessenger:[registrar messenger]];
+  [methodChannel setMethodCallHandler:^(FlutterMethodCall* call, FlutterResult result) {
+    if ([@"start" isEqualToString:call.method]) {
+      [sensorStreamHandler startSensors];
+      result(nil);
+    } else if ([@"stop" isEqualToString:call.method]) {
+      [sensorStreamHandler stopSensors];
+      result(nil);
+    } else {
+      result(FlutterMethodNotImplemented);
+    }
+  }];
 }
 
 @end
@@ -34,15 +49,38 @@ static void sendData(Float64 pitch, Float64 roll,Float64 yaw, FlutterEventSink s
 
 @implementation FLTSensorStreamHandler
 
+@synthesize isStarted = _isStarted;
+
 double degrees(double radians) {
   return (180/M_PI) * radians;
 }
 
+- (instancetype)init {
+  self = [super init];
+  if (self) {
+    _isStarted = NO;
+  }
+  return self;
+}
+
+- (void)startSensors {
+  _isStarted = YES;
+}
+
+- (void)stopSensors {
+  _isStarted = NO;
+  if (_motionManager) {
+    [_motionManager stopDeviceMotionUpdates];
+  }
+}
+
 - (FlutterError*)onListenWithArguments:(id)arguments eventSink:(FlutterEventSink)eventSink {
   _initMotionManager();
-   [_motionManager
-   startDeviceMotionUpdatesUsingReferenceFrame:CMAttitudeReferenceFrameXArbitraryCorrectedZVertical toQueue:[[NSOperationQueue alloc] init]
-   withHandler:^(CMDeviceMotion* data, NSError* error) {
+  if (_isStarted) {
+    [_motionManager
+     startDeviceMotionUpdatesUsingReferenceFrame:CMAttitudeReferenceFrameXArbitraryCorrectedZVertical toQueue:[[NSOperationQueue alloc] init]
+     withHandler:^(CMDeviceMotion* data, NSError* error) {
+       if (!self.isStarted) return;
       CMAttitude *attitude = data.attitude;
      CMQuaternion quat = attitude.quaternion;
    
@@ -78,6 +116,7 @@ double degrees(double radians) {
      double myYaw = asin(2*quat.x*quat.y + 2*quat.w*quat.z);
      sendData(pitch, rollGravity , myYaw, eventSink);
    }];
+  }
   return nil;
 }
 

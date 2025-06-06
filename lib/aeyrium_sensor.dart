@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
+const MethodChannel _sensorMethodChannel =
+    MethodChannel('plugins.aeyrium.com/sensor_method');
 const EventChannel _sensorEventChannel =
     EventChannel('plugins.aeyrium.com/sensor');
 
@@ -28,6 +30,7 @@ class SensorEvent {
 
 class AeyriumSensor {
   static Stream<SensorEvent>? _sensorEvents;
+  static bool _isStarted = false;
 
   AeyriumSensor._();
 
@@ -41,6 +44,26 @@ class AeyriumSensor {
     }
     return e;
   }
+
+  /// Starts the sensor data collection.
+  static Future<void> start() async {
+    if (!_isStarted) {
+      await _sensorMethodChannel.invokeMethod('start');
+      _isStarted = true;
+    }
+  }
+
+  /// Stops the sensor data collection to save battery.
+  static Future<void> stop() async {
+    if (_isStarted) {
+      await _sensorMethodChannel.invokeMethod('stop');
+      _isStarted = false;
+      _sensorEvents = null;
+    }
+  }
+
+  /// Returns true if the sensor is currently started.
+  static bool get isStarted => _isStarted;
 
   static SensorEvent _listToSensorEvent(List<double> list) {
     return SensorEvent(list[0], list[1], list[2]);

@@ -5,7 +5,10 @@ import io.flutter.embedding.engine.plugins.activity.ActivityAware;
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.EventChannel;
+import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.Result;
+import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
+import io.flutter.plugin.common.MethodCall;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -19,16 +22,20 @@ import android.content.Context;
 import androidx.annotation.NonNull;
 
 /** AeyriumSensorPlugin */
-public class AeyriumSensorPlugin implements FlutterPlugin, EventChannel.StreamHandler, ActivityAware {
+public class AeyriumSensorPlugin implements FlutterPlugin, EventChannel.StreamHandler, ActivityAware, MethodCallHandler {
 
   private static final String SENSOR_CHANNEL_NAME =
           "plugins.aeyrium.com/sensor";
+  private static final String METHOD_CHANNEL_NAME =
+          "plugins.aeyrium.com/sensor_method";
   private static final int SENSOR_DELAY_MICROS = 1000 * 1000;//16 * 1000;
   private WindowManager mWindowManager;
   private SensorEventListener sensorEventListener;
   private SensorManager sensorManager;
   private Sensor sensor;
   private int mLastAccuracy;
+  private EventChannel.EventSink eventSink;
+  private boolean isStarted = false;
   BinaryMessenger binaryMessenger;
 
 
@@ -42,14 +49,49 @@ public class AeyriumSensorPlugin implements FlutterPlugin, EventChannel.StreamHa
 
   @Override
   public void onListen(Object arguments, EventChannel.EventSink events) {
+    eventSink = events;
     sensorEventListener = createSensorEventListener(events);
-    sensorManager.registerListener(sensorEventListener, sensor, sensorManager.SENSOR_DELAY_UI);
+    if (isStarted) {
+      sensorManager.registerListener(sensorEventListener, sensor, sensorManager.SENSOR_DELAY_UI);
+    }
   }
 
   @Override
   public void onCancel(Object arguments) {
     if (sensorManager != null && sensorEventListener != null){
         sensorManager.unregisterListener(sensorEventListener);
+    }
+    eventSink = null;
+  }
+
+  @Override
+  public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
+    switch (call.method) {
+      case "start":
+        startSensors();
+        result.success(null);
+        break;
+      case "stop":
+        stopSensors();
+        result.success(null);
+        break;
+      default:
+        result.notImplemented();
+        break;
+    }
+  }
+
+  private void startSensors() {
+    if (!isStarted && sensorManager != null && sensor != null && sensorEventListener != null) {
+      sensorManager.registerListener(sensorEventListener, sensor, sensorManager.SENSOR_DELAY_UI);
+      isStarted = true;
+    }
+  }
+
+  private void stopSensors() {
+    if (isStarted && sensorManager != null && sensorEventListener != null) {
+      sensorManager.unregisterListener(sensorEventListener);
+      isStarted = false;
     }
   }
 
@@ -136,8 +178,12 @@ public class AeyriumSensorPlugin implements FlutterPlugin, EventChannel.StreamHa
   public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
     final EventChannel sensorChannel =
             new EventChannel(binaryMessenger, SENSOR_CHANNEL_NAME);
-    sensorChannel.setStreamHandler(
-            new AeyriumSensorPlugin(binding.getActivity().getApplicationContext(), Sensor.TYPE_ROTATION_VECTOR, binding.getActivity()));
+    final MethodChannel methodChannel = 
+            new MethodChannel(binaryMessenger, METHOD_CHANNEL_NAME);
+    
+    AeyriumSensorPlugin plugin = new AeyriumSensorPlugin(binding.getActivity().getApplicationContext(), Sensor.TYPE_ROTATION_VECTOR, binding.getActivity());
+    sensorChannel.setStreamHandler(plugin);
+    methodChannel.setMethodCallHandler(plugin);
   }
 
   @Override
