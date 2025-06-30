@@ -114,7 +114,9 @@ double degrees(double radians) {
      double roll2 = -(atan2(-a.m13, a.m33)); //roll based on android code from matrix
      double rollGravity =  atan2(data.gravity.x, data.gravity.y) - M_PI; //roll based on just gravity
      double myYaw = asin(2*quat.x*quat.y + 2*quat.w*quat.z);
-     sendData(pitch, rollGravity , myYaw, eventSink);
+     dispatch_async(dispatch_get_main_queue(), ^{
+       sendData(pitch, rollGravity , myYaw, eventSink);
+     });
    }];
   }
   return nil;
