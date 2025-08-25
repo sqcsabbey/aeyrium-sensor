@@ -16,11 +16,19 @@
                                    binaryMessenger:[registrar messenger]];
   [methodChannel setMethodCallHandler:^(FlutterMethodCall* call, FlutterResult result) {
     if ([@"start" isEqualToString:call.method]) {
+      // NSLog(@"AeyriumSensor: Received start command");
       [sensorStreamHandler startSensors];
       result(nil);
     } else if ([@"stop" isEqualToString:call.method]) {
+      // NSLog(@"AeyriumSensor: Received stop command");
       [sensorStreamHandler stopSensors];
       result(nil);
+    } else if ([@"checkAvailability" isEqualToString:call.method]) {
+      // NSLog(@"AeyriumSensor: Checking sensor availability");
+      CMMotionManager* tempManager = [[CMMotionManager alloc] init];
+      BOOL isAvailable = [tempManager isDeviceMotionAvailable];
+      // NSLog(@"AeyriumSensor: Device motion available: %@", isAvailable ? @"YES" : @"NO");
+      result(@(isAvailable));
     } else {
       result(FlutterMethodNotImplemented);
     }
@@ -33,8 +41,17 @@ CMMotionManager* _motionManager;
 
 void _initMotionManager() {
   if (!_motionManager) {
+    // NSLog(@"AeyriumSensor: Initializing motion manager");
     _motionManager = [[CMMotionManager alloc] init];
     _motionManager.deviceMotionUpdateInterval = 0.03;
+    
+    // if ([_motionManager isDeviceMotionAvailable]) {
+    //   NSLog(@"AeyriumSensor: Device motion is available");
+    // } else {
+    //   NSLog(@"AeyriumSensor: ERROR - Device motion is NOT available!");
+    // }
+  } else {
+    // NSLog(@"AeyriumSensor: Motion manager already initialized");
   }
 }
 
@@ -47,7 +64,9 @@ static void sendData(Float64 pitch, Float64 roll,Float64 yaw, FlutterEventSink s
 }
 
 
-@implementation FLTSensorStreamHandler
+@implementation FLTSensorStreamHandler {
+  FlutterEventSink _eventSink;
+}
 
 @synthesize isStarted = _isStarted;
 
@@ -64,24 +83,65 @@ double degrees(double radians) {
 }
 
 - (void)startSensors {
+  // NSLog(@"AeyriumSensor: startSensors called, setting _isStarted to YES");
   _isStarted = YES;
+  
+  // Try to start immediately if we already have an event sink
+  if (_eventSink) {
+    // NSLog(@"AeyriumSensor: Event sink exists, attempting to start motion updates immediately");
+    [self startMotionUpdatesIfNeeded];
+  } else {
+    // NSLog(@"AeyriumSensor: No event sink yet, will start when onListen is called");
+  }
 }
 
 - (void)stopSensors {
+  // NSLog(@"AeyriumSensor: stopSensors called, setting _isStarted to NO");
   _isStarted = NO;
   if (_motionManager) {
+    // NSLog(@"AeyriumSensor: Stopping device motion updates");
     [_motionManager stopDeviceMotionUpdates];
   }
 }
 
-- (FlutterError*)onListenWithArguments:(id)arguments eventSink:(FlutterEventSink)eventSink {
+- (void)startMotionUpdatesIfNeeded {
+  if (!_isStarted || !_eventSink) {
+    // NSLog(@"AeyriumSensor: Cannot start motion updates - isStarted: %@, eventSink: %@", 
+    //       _isStarted ? @"YES" : @"NO", 
+    //       _eventSink ? @"exists" : @"nil");
+    return;
+  }
+  
   _initMotionManager();
-  if (_isStarted) {
-    [_motionManager
-     startDeviceMotionUpdatesUsingReferenceFrame:CMAttitudeReferenceFrameXArbitraryCorrectedZVertical toQueue:[[NSOperationQueue alloc] init]
-     withHandler:^(CMDeviceMotion* data, NSError* error) {
-       if (!self.isStarted) return;
-      CMAttitude *attitude = data.attitude;
+  
+  if ([_motionManager isDeviceMotionActive]) {
+    // NSLog(@"AeyriumSensor: Device motion already active");
+    return;
+  }
+  
+  // NSLog(@"AeyriumSensor: Starting device motion updates");
+  NSError *error = nil;
+  
+  [_motionManager
+   startDeviceMotionUpdatesUsingReferenceFrame:CMAttitudeReferenceFrameXArbitraryCorrectedZVertical 
+   toQueue:[[NSOperationQueue alloc] init]
+   withHandler:^(CMDeviceMotion* data, NSError* error) {
+     if (error) {
+       // NSLog(@"AeyriumSensor: ERROR in motion handler - %@", error.localizedDescription);
+       return;
+     }
+     
+     if (!self.isStarted) {
+       // NSLog(@"AeyriumSensor: Motion data received but sensor is stopped, ignoring");
+       return;
+     }
+     
+     if (!data) {
+       // NSLog(@"AeyriumSensor: ERROR - No motion data received");
+       return;
+     }
+     
+     CMAttitude *attitude = data.attitude;
      CMQuaternion quat = attitude.quaternion;
    
      CMDeviceMotion *deviceMotion = data;
@@ -114,16 +174,40 @@ double degrees(double radians) {
      double roll2 = -(atan2(-a.m13, a.m33)); //roll based on android code from matrix
      double rollGravity =  atan2(data.gravity.x, data.gravity.y) - M_PI; //roll based on just gravity
      double myYaw = -atan2(2*(quat.w*quat.z + quat.x*quat.y), 1 - 2*(quat.y*quat.y + quat.z*quat.z));
+     
      dispatch_async(dispatch_get_main_queue(), ^{
-       sendData(pitch, rollGravity , myYaw, eventSink);
+       if (self->_eventSink) {
+         sendData(pitch, rollGravity, myYaw, self->_eventSink);
+       } else {
+         // NSLog(@"AeyriumSensor: Event sink lost while sending data");
+       }
      });
    }];
+  
+  // if ([_motionManager isDeviceMotionActive]) {
+  //   NSLog(@"AeyriumSensor: Successfully started device motion updates");
+  // } else {
+  //   NSLog(@"AeyriumSensor: ERROR - Failed to start device motion updates");
+  // }
+}
+
+- (FlutterError*)onListenWithArguments:(id)arguments eventSink:(FlutterEventSink)eventSink {
+  // NSLog(@"AeyriumSensor: onListen called, isStarted: %@", _isStarted ? @"YES" : @"NO");
+  _eventSink = eventSink;
+  
+  if (_isStarted) {
+    [self startMotionUpdatesIfNeeded];
+  } else {
+    // NSLog(@"AeyriumSensor: Sensor not started yet, waiting for start command");
   }
+  
   return nil;
 }
 
 - (FlutterError*)onCancelWithArguments:(id)arguments {
+  // NSLog(@"AeyriumSensor: onCancel called, stopping device motion updates");
   [_motionManager stopDeviceMotionUpdates];
+  _eventSink = nil;
   return nil;
 }
 

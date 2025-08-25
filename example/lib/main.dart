@@ -19,18 +19,61 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    _checkSensorAvailability();
+  }
+
+  void _checkSensorAvailability() async {
+    final isAvailable = await AeyriumSensor.checkSensorAvailability();
+    if (!isAvailable) {
+      setState(() {
+        _data = "Sensor not available on this device";
+      });
+    }
   }
 
   void _startSensors() async {
-    await AeyriumSensor.start();
-    _streamSubscriptions = AeyriumSensor.sensorEvents.listen((event) {
+    // print('Starting sensors...');
+    
+    // Check availability first
+    final isAvailable = await AeyriumSensor.checkSensorAvailability();
+    if (!isAvailable) {
+      // print('Sensor not available on this device');
       setState(() {
-        _data = "Pitch ${event.pitch} , Roll ${event.roll}";
+        _data = "Error: Sensor not available";
       });
-    });
-    setState(() {
-      _isStarted = true;
-    });
+      return;
+    }
+    
+    try {
+      await AeyriumSensor.start();
+      // print('Start command sent, setting up event listener...');
+      
+      _streamSubscriptions = AeyriumSensor.sensorEvents.listen(
+        (event) {
+          // print('Received sensor event: pitch=${event.pitch}, roll=${event.roll}, yaw=${event.yaw}');
+          setState(() {
+            _data = "Pitch ${event.pitch} , Roll ${event.roll}";
+          });
+        },
+        onError: (error) {
+          // print('Error in sensor stream: $error');
+          setState(() {
+            _data = "Error: Stream error - $error";
+          });
+        },
+      );
+      
+      setState(() {
+        _isStarted = true;
+        _data = "Sensor started, waiting for data...";
+      });
+      // print('Sensor started successfully');
+    } catch (e) {
+      // print('Failed to start sensor: $e');
+      setState(() {
+        _data = "Error: Failed to start sensor - $e";
+      });
+    }
   }
 
   void _stopSensors() async {

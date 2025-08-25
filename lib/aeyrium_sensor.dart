@@ -38,9 +38,23 @@ class AeyriumSensor {
   static Stream<SensorEvent> get sensorEvents {
     var e = _sensorEvents;
     if (e == null) {
+      // print('AeyriumSensor: Creating new sensor event stream');
       e = _sensorEvents = _sensorEventChannel
           .receiveBroadcastStream()
-          .map((dynamic event) => _listToSensorEvent(event.cast<double>()));
+          .map((dynamic event) {
+            if (event == null) {
+              // print('AeyriumSensor: Received null event from platform');
+              throw Exception('Null event received from platform');
+            }
+            // print('AeyriumSensor: Received event data: $event');
+            return _listToSensorEvent(event.cast<double>());
+          })
+          .handleError((error) {
+            // print('AeyriumSensor: Error in event stream: $error');
+            throw error;
+          });
+    } else {
+      // print('AeyriumSensor: Returning existing sensor event stream');
     }
     return e;
   }
@@ -48,8 +62,13 @@ class AeyriumSensor {
   /// Starts the sensor data collection.
   static Future<void> start() async {
     if (!_isStarted) {
-      await _sensorMethodChannel.invokeMethod('start');
-      _isStarted = true;
+      try {
+        await _sensorMethodChannel.invokeMethod('start');
+        _isStarted = true;
+      } catch (e) {
+        // print('Error starting sensor: $e');
+        rethrow;
+      }
     }
   }
 
@@ -64,6 +83,18 @@ class AeyriumSensor {
 
   /// Returns true if the sensor is currently started.
   static bool get isStarted => _isStarted;
+
+  /// Checks if the sensor is available on the device.
+  static Future<bool> checkSensorAvailability() async {
+    try {
+      final bool isAvailable = await _sensorMethodChannel.invokeMethod('checkAvailability') ?? false;
+      // print('AeyriumSensor: Sensor availability check result: $isAvailable');
+      return isAvailable;
+    } catch (e) {
+      // print('AeyriumSensor: Error checking sensor availability: $e');
+      return false;
+    }
+  }
 
   static SensorEvent _listToSensorEvent(List<double> list) {
     return SensorEvent(list[0], list[1], list[2]);

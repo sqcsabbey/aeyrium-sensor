@@ -20,10 +20,12 @@ import android.app.Activity;
 import android.content.Context;
 
 import androidx.annotation.NonNull;
+// import android.util.Log;
 
 /** AeyriumSensorPlugin */
 public class AeyriumSensorPlugin implements FlutterPlugin, EventChannel.StreamHandler, ActivityAware, MethodCallHandler {
-
+  // private static final String TAG = "AeyriumSensor";
+  
   private static final String SENSOR_CHANNEL_NAME =
           "plugins.aeyrium.com/sensor";
   private static final String METHOD_CHANNEL_NAME =
@@ -42,22 +44,39 @@ public class AeyriumSensorPlugin implements FlutterPlugin, EventChannel.StreamHa
   public AeyriumSensorPlugin(){}
 
   private AeyriumSensorPlugin(Context context, int sensorType, Activity activity) {
+    // Log.d(TAG, "Initializing AeyriumSensorPlugin");
     mWindowManager = activity.getWindow().getWindowManager();
     sensorManager = (SensorManager) context.getSystemService(context.SENSOR_SERVICE);
     sensor = sensorManager.getDefaultSensor(sensorType);
+    
+    // if (sensor == null) {
+    //   Log.e(TAG, "ERROR: Rotation vector sensor not available on this device!");
+    // } else {
+    //   Log.d(TAG, "Rotation vector sensor found: " + sensor.getName());
+    // }
   }
 
   @Override
   public void onListen(Object arguments, EventChannel.EventSink events) {
+    // Log.d(TAG, "onListen called, isStarted: " + isStarted);
     eventSink = events;
     sensorEventListener = createSensorEventListener(events);
     if (isStarted) {
-      sensorManager.registerListener(sensorEventListener, sensor, sensorManager.SENSOR_DELAY_UI);
+      // Log.d(TAG, "Sensor already started, registering listener immediately");
+      if (sensor != null && sensorManager != null) {
+        boolean registered = sensorManager.registerListener(sensorEventListener, sensor, sensorManager.SENSOR_DELAY_UI);
+        // Log.d(TAG, "Sensor listener registration result: " + registered);
+      } else {
+        // Log.e(TAG, "ERROR: Cannot register listener - sensor or sensorManager is null");
+      }
+    } else {
+      // Log.d(TAG, "Sensor not started yet, waiting for start command");
     }
   }
 
   @Override
   public void onCancel(Object arguments) {
+    // Log.d(TAG, "onCancel called, unregistering sensor listener");
     if (sensorManager != null && sensorEventListener != null){
         sensorManager.unregisterListener(sensorEventListener);
     }
@@ -68,12 +87,20 @@ public class AeyriumSensorPlugin implements FlutterPlugin, EventChannel.StreamHa
   public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
     switch (call.method) {
       case "start":
+        // Log.d(TAG, "Received start command");
         startSensors();
         result.success(null);
         break;
       case "stop":
+        // Log.d(TAG, "Received stop command");
         stopSensors();
         result.success(null);
+        break;
+      case "checkAvailability":
+        // Log.d(TAG, "Checking sensor availability");
+        boolean isAvailable = sensor != null;
+        // Log.d(TAG, "Sensor availability: " + isAvailable);
+        result.success(isAvailable);
         break;
       default:
         result.notImplemented();
@@ -82,16 +109,39 @@ public class AeyriumSensorPlugin implements FlutterPlugin, EventChannel.StreamHa
   }
 
   private void startSensors() {
-    if (!isStarted && sensorManager != null && sensor != null && sensorEventListener != null) {
-      sensorManager.registerListener(sensorEventListener, sensor, sensorManager.SENSOR_DELAY_UI);
+    // Log.d(TAG, "startSensors called, current isStarted: " + isStarted);
+    if (!isStarted) {
+      if (sensorManager == null) {
+        // Log.e(TAG, "ERROR: sensorManager is null");
+        return;
+      }
+      if (sensor == null) {
+        // Log.e(TAG, "ERROR: sensor is null - rotation vector sensor not available");
+        return;
+      }
+      
       isStarted = true;
+      // Log.d(TAG, "Set isStarted to true");
+      
+      if (sensorEventListener != null && eventSink != null) {
+        boolean registered = sensorManager.registerListener(sensorEventListener, sensor, sensorManager.SENSOR_DELAY_UI);
+        // Log.d(TAG, "Immediately registered sensor listener, result: " + registered);
+      } else {
+        // Log.d(TAG, "Will register listener when onListen is called (listener: " + 
+        //            (sensorEventListener != null ? "exists" : "null") + 
+        //            ", eventSink: " + (eventSink != null ? "exists" : "null") + ")");
+      }
+    } else {
+      // Log.d(TAG, "Sensors already started");
     }
   }
 
   private void stopSensors() {
+    // Log.d(TAG, "stopSensors called, current isStarted: " + isStarted);
     if (isStarted && sensorManager != null && sensorEventListener != null) {
       sensorManager.unregisterListener(sensorEventListener);
       isStarted = false;
+      // Log.d(TAG, "Stopped sensors and set isStarted to false");
     }
   }
 
@@ -101,12 +151,14 @@ public class AeyriumSensorPlugin implements FlutterPlugin, EventChannel.StreamHa
       public void onAccuracyChanged(Sensor sensor, int accuracy) {
         if (mLastAccuracy != accuracy) {
           mLastAccuracy = accuracy;
+          // Log.d(TAG, "Sensor accuracy changed to: " + accuracy);
         }
       }
 
       @Override
       public void onSensorChanged(SensorEvent event) {
         if (mLastAccuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) {
+          // Log.w(TAG, "Sensor data unreliable, skipping update");
           return;
         }
 
