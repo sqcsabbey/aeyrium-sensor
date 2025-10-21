@@ -123,7 +123,7 @@ double degrees(double radians) {
   NSError *error = nil;
   
   [_motionManager
-   startDeviceMotionUpdatesUsingReferenceFrame:CMAttitudeReferenceFrameXArbitraryCorrectedZVertical 
+   startDeviceMotionUpdatesUsingReferenceFrame:CMAttitudeReferenceFrameXMagneticNorthZVertical
    toQueue:[[NSOperationQueue alloc] init]
    withHandler:^(CMDeviceMotion* data, NSError* error) {
      if (error) {
@@ -169,11 +169,14 @@ double degrees(double radians) {
                       0.0f, 0.0f, 0.0f, 1.0f);
      
      deviceMotionAttitudeMatrix = GLKMatrix4Multiply(baseRotation, deviceMotionAttitudeMatrix);
-     double pitch = (asin(-deviceMotionAttitudeMatrix.m22));
-     double roll = -(atan2(2*(quat.y*quat.w - quat.x*quat.z), 1 - 2*quat.y*quat.y - 2*quat.z*quat.z)) ;
-     double roll2 = -(atan2(-a.m13, a.m33)); //roll based on android code from matrix
-     double rollGravity =  atan2(data.gravity.x, data.gravity.y) - M_PI; //roll based on just gravity
-     double myYaw = -atan2(2*(quat.w*quat.z + quat.x*quat.y), 1 - 2*(quat.y*quat.y + quat.z*quat.z));
+     // iOS attitude.yaw with XMagneticNorthZVertical reference frame
+     // Adjust for device Y-axis pointing forward (subtract 90°) and flip 180°
+     double myYaw = -(attitude.yaw - M_PI_2) + M_PI;
+
+     // Match Android's sign conventions
+     double pitch = -attitude.pitch;
+     double roll = -attitude.roll;
+     double rollGravity = atan2(data.gravity.x, data.gravity.y) - M_PI;
      
      dispatch_async(dispatch_get_main_queue(), ^{
        if (self->_eventSink) {
