@@ -12,10 +12,11 @@ A new flutter plugin project.
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Aeyrium Inc' => 'diego@aeyrium.com' }
   s.source           = { :path => '.' }
-  s.source_files = 'Classes/**/*'
-  s.public_header_files = 'Classes/**/*.h'
+  s.source_files = 'aeyrium_sensor/Sources/aeyrium_sensor/**/*.{h,m}'
+  s.public_header_files = 'aeyrium_sensor/Sources/aeyrium_sensor/include/**/*.h'
   s.dependency 'Flutter'
   
-  s.ios.deployment_target = '8.0'
+  s.ios.deployment_target = '13.0'
+  s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
 end
 

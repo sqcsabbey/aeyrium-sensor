@@ -19,5 +19,9 @@ dev_dependencies:
 # The following section is specific to Flutter.
 flutter:
   plugin:
-    androidPackage: com.aeyrium.sensor
-    pluginClass: AeyriumSensorPlugin
+    platforms:
+      android:
+        package: com.aeyrium.sensor
+        pluginClass: AeyriumSensorPlugin
+      ios:
+        pluginClass: AeyriumSensorPlugin
